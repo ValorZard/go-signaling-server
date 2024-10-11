@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 
 	"github.com/pion/webrtc/v4"
@@ -13,9 +14,52 @@ import (
 var offers = []webrtc.SessionDescription{}
 var answers = []webrtc.SessionDescription{}
 
+type ClientConnection struct {
+	IsHost bool
+	Offer webrtc.SessionDescription
+	Answer webrtc.SessionDescription
+}
+
+type Lobby struct {
+	Clients []ClientConnection
+}
+
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func generateNewLobbyId() string {
+	// have random size for lobby id
+	size := 6
+    buffer := make([]rune, size)
+    for i := range buffer {
+        buffer[i] = letters[rand.Intn(len(letters))]
+    }
+    id := string(buffer)
+
+	// check if room id is already in lobby_list
+	_, ok := lobby_list[id]
+	if ok {
+		// if it already exists, call function again
+		return generateNewLobbyId()
+	}
+	return id
+}
+
+func makeLobby() string {
+	lobby := Lobby{}
+	lobby.Clients = []ClientConnection{}
+	// first client is always host
+	lobby.Clients = append(lobby.Clients, ClientConnection{IsHost: true})
+	lobby_id := generateNewLobbyId()
+	lobby_list[lobby_id] = lobby
+	return lobby_id
+}
+
+var lobby_list = map[string]Lobby{}
+
 func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/", http.FileServer(http.Dir("./public")))
+	mux.HandleFunc("/lobby/host", lobbyHost)
 	mux.HandleFunc("/offer/get", offerGet)
 	mux.HandleFunc("/offer/post", offerPost)
 	mux.HandleFunc("/answer/get", answerGet)
@@ -28,6 +72,16 @@ func main() {
     // documentation below for more options.
     handler := cors.Default().Handler(mux)
     http.ListenAndServe(":3000", handler)
+}
+
+func lobbyHost(w http.ResponseWriter, r *http.Request) {
+	lobby_id := makeLobby()
+	jsonValue, _ := json.Marshal(lobby_id)
+	// return lobby id to host
+	io.Writer.Write(w, jsonValue)
+	fmt.Println("lobbyHost")
+	fmt.Println(jsonValue)
+	fmt.Println(lobby_list)
 }
 
 func offerGet(w http.ResponseWriter, r *http.Request) {
