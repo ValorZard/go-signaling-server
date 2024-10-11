@@ -7,21 +7,27 @@ import (
 	"net/http"
 
 	"github.com/pion/webrtc/v4"
+	"github.com/rs/cors"
 )
 
 var offers = []webrtc.SessionDescription{}
 var answers = []webrtc.SessionDescription{}
 
 func main() {
-	http.Handle("/", http.FileServer(http.Dir("./public")))
-	http.HandleFunc("/offer/get", offerGet)
-	http.HandleFunc("/offer/post", offerPost)
-	http.HandleFunc("/answer/get", answerGet)
-	http.HandleFunc("/answer/post", answerPost)
-	http.HandleFunc("/ice", ice)
+	mux := http.NewServeMux()
+	mux.Handle("/", http.FileServer(http.Dir("./public")))
+	mux.HandleFunc("/offer/get", offerGet)
+	mux.HandleFunc("/offer/post", offerPost)
+	mux.HandleFunc("/answer/get", answerGet)
+	mux.HandleFunc("/answer/post", answerPost)
+	mux.HandleFunc("/ice", ice)
 
-	fmt.Println("Server started on port 8080")
-	http.ListenAndServe(":8080", nil)
+	fmt.Println("Server started on port 3000")
+	// cors.Default() setup the middleware with default options being
+    // all origins accepted with simple methods (GET, POST). See
+    // documentation below for more options.
+    handler := cors.Default().Handler(mux)
+    http.ListenAndServe(":3000", handler)
 }
 
 func offerGet(w http.ResponseWriter, r *http.Request) {
