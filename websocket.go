@@ -1,12 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -68,13 +68,8 @@ func echo(c *websocket.Conn, l *rate.Limiter) error {
 		return err
 	}
 
-	// Debugging, read from reader and print out what we're echoing
-	buf := new(strings.Builder)
-	_, err = io.Copy(buf, r)
-	// check errors
-	if err != nil {
-		return err
-	}
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(r)
 	log.Println(buf.String())
 
 	_, err = io.Copy(w, r)
