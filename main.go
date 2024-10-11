@@ -1,37 +1,52 @@
 package main
 
-
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 
-    "github.com/gin-gonic/gin"
 	"github.com/pion/webrtc/v4"
 )
 
-var sessions = []webrtc.SessionDescription{};
+var sessions = []webrtc.SessionDescription{}
 
-func getSessions(c *gin.Context){
-	// return with list of all sessions 
-	c.IndentedJSON(http.StatusOK, sessions)
+func main() {
+	http.Handle("/", http.FileServer(http.Dir("./public")))
+	http.HandleFunc("/offer/get", offerGet)
+	http.HandleFunc("/offer/post", offerPost)
+	http.HandleFunc("/answer", answer)
+	http.HandleFunc("/ice", ice)
+	http.ListenAndServe(":8080", nil)
 }
 
-func postSession(c *gin.Context){
-	var newSession webrtc.SessionDescription
+func offerPost(w http.ResponseWriter, r *http.Request) {
+	var sdp webrtc.SessionDescription
 
-	// bind json to newSession
-	if err := c.BindJSON(&newSession); err != nil {
+	// Try to decode the request body into the struct. If there is an error,
+	// respond to the client with the error message and a 400 status code.
+	err := json.NewDecoder(r.Body).Decode(&sdp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// add new session to the slice
-	sessions = append(sessions, newSession)
-	c.IndentedJSON(http.StatusCreated, newSession)
+	sessions = append(sessions, sdp)
+
+	fmt.Println(sessions)
 }
 
-func main(){
-	router := gin.Default()
-	router.GET("/sessions", getSessions)
-	router.POST("/sessions", postSession)
+func offerGet(w http.ResponseWriter, r *http.Request) {
+	// TODO: Implement the offer handler
+	w.Header().Set("Content-Type", "application/json")
 
-	router.Run("localhost:8080")
+}
+
+func answer(w http.ResponseWriter, r *http.Request) {
+	// TODO: Implement the answer handler
+	w.Header().Set("Content-Type", "application/json")
+}
+
+func ice(w http.ResponseWriter, r *http.Request) {
+	// TODO: Implement the ice handler
+	w.Header().Set("Content-Type", "application/json")
 }
