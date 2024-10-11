@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+
 	"math/rand"
 	"net/http"
 
@@ -65,6 +66,7 @@ func main() {
 	mux.HandleFunc("/answer/get", answerGet)
 	mux.HandleFunc("/answer/post", answerPost)
 	mux.HandleFunc("/ice", ice)
+	mux.HandleFunc("/ws", websocketHandler)
 
 	fmt.Println("Server started on port 3000")
 	// cors.Default() setup the middleware with default options being
