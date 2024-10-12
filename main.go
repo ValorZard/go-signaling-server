@@ -64,7 +64,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/", http.FileServer(http.Dir("./public")))
 	mux.HandleFunc("/lobby/host", lobbyHost)
-	mux.HandleFunc("/ws", lobbyHandler)
+	mux.HandleFunc("/lobby", lobbyHandler)
 	mux.HandleFunc("/offer/get", offerGet)
 	mux.HandleFunc("/offer/post", offerPost)
 	mux.HandleFunc("/answer/get", answerGet)
@@ -90,6 +90,19 @@ func lobbyHost(w http.ResponseWriter, r *http.Request) {
 }
 
 func lobbyHandler(w http.ResponseWriter, r *http.Request) {
+	// https://freshman.tech/snippets/go/extract-url-query-params/
+	// get lobby id from query params
+	lobby_id := r.URL.Query().Get("id")
+	log.Printf("lobby_id: %s", lobby_id)
+
+	// only open up websocket connection if lobby exists
+	_, ok := lobby_list[lobby_id]
+	// If the key doesn't exist, return error
+	if !ok {
+    	w.WriteHeader(http.StatusNotFound)
+        return
+	}
+
 	conn, err := websocket.Accept(w, r, nil)
 	if err != nil {
 		log.Printf("websocket initialization error: %s", err)
