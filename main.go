@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	//"bytes"
+	"bytes"
 	"math/rand"
 	"net/http"
 
@@ -96,6 +96,7 @@ func lobbyHandler(w http.ResponseWriter, r *http.Request) {
 	lobby_id := r.URL.Query().Get("id")
 	log.Printf("lobby_id: %s", lobby_id)
 
+	
 	// only open up websocket connection if lobby exists
 	_, ok := lobby_list[lobby_id]
 	// If the key doesn't exist, return error
@@ -103,6 +104,7 @@ func lobbyHandler(w http.ResponseWriter, r *http.Request) {
     	w.WriteHeader(http.StatusNotFound)
         return
 	}
+
 
 	conn, err := websocket.Accept(w, r, nil)
 	if err != nil {
@@ -130,13 +132,17 @@ func lobbyHandler(w http.ResponseWriter, r *http.Request) {
             return
         }
 
-		/*
+		
         buf := new(bytes.Buffer)
-        buf.ReadFrom(r)
+		_, err = io.Copy(buf, r)
+		if err != nil {
+			log.Println("Failed to copy data to buffer:", err)
+			return
+		}
         log.Println(buf.String())
-		*/
+		
 
-        _, err = io.Copy(w, r)
+        _, err = w.Write(buf.Bytes())
         if err != nil {
             log.Println("Failed to io.Copy:", err)
             return
