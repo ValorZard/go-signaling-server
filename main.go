@@ -1,15 +1,18 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-
+	"log"
+	"bytes"
 	"math/rand"
 	"net/http"
 
 	"github.com/pion/webrtc/v4"
 	"github.com/rs/cors"
+	"github.com/coder/websocket"
 )
 
 var offers = []webrtc.SessionDescription{}
@@ -61,12 +64,12 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/", http.FileServer(http.Dir("./public")))
 	mux.HandleFunc("/lobby/host", lobbyHost)
+	mux.HandleFunc("/ws", lobbyHandler)
 	mux.HandleFunc("/offer/get", offerGet)
 	mux.HandleFunc("/offer/post", offerPost)
 	mux.HandleFunc("/answer/get", answerGet)
 	mux.HandleFunc("/answer/post", answerPost)
 	mux.HandleFunc("/ice", ice)
-	mux.HandleFunc("/ws", websocketHandler)
 
 	fmt.Println("Server started on port 3000")
 	// cors.Default() setup the middleware with default options being
@@ -84,6 +87,51 @@ func lobbyHost(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("lobbyHost")
 	fmt.Println(jsonValue)
 	fmt.Println(lobby_list)
+}
+
+func lobbyHandler(w http.ResponseWriter, r *http.Request) {
+	conn, err := websocket.Accept(w, r, nil)
+	if err != nil {
+		log.Printf("websocket initialization error: %s", err)
+		return
+	}
+
+	log.Printf("websocket connection accepted")
+
+	// Do something with conn C.
+	defer conn.CloseNow()
+
+	ctx := context.Background()
+
+    for {
+        typ, r, err := conn.Reader(ctx)
+        if err != nil {
+            log.Println("Failed to get reader:", err)
+            return
+        }
+
+        w, err := conn.Writer(ctx, typ)
+        if err != nil {
+            log.Println("Failed to get writer:", err)
+            return
+        }
+
+        buf := new(bytes.Buffer)
+        buf.ReadFrom(r)
+        log.Println(buf.String())
+
+        _, err = io.Copy(w, r)
+        if err != nil {
+            log.Println("Failed to io.Copy:", err)
+            return
+        }
+
+        err = w.Close()
+        if err != nil {
+            log.Println("Failed to close writer:", err)
+            return
+        }
+    }
 }
 
 func offerGet(w http.ResponseWriter, r *http.Request) {
