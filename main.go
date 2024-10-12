@@ -63,7 +63,7 @@ var lobby_list = map[string]Lobby{}
 func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/", http.FileServer(http.Dir("./public")))
-	mux.HandleFunc("/lobby/host", lobbyHost)
+	mux.HandleFunc("/hostLobby", lobbyHost)
 	mux.HandleFunc("/lobby", lobbyHandler)
 	mux.HandleFunc("/offer/get", offerGet)
 	mux.HandleFunc("/offer/post", offerPost)
@@ -79,9 +79,15 @@ func main() {
     http.ListenAndServe(":3000", handler)
 }
 
+type LobbyData struct {
+	LobbyId string
+}
+
 func lobbyHost(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	lobby_id := makeLobby()
-	jsonValue, _ := json.Marshal(lobby_id)
+	data := &LobbyData{LobbyId: lobby_id}
+	jsonValue, _ := json.Marshal(data)
 	// return lobby id to host
 	io.Writer.Write(w, jsonValue)
 	fmt.Println("lobbyHost")
