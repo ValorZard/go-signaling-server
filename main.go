@@ -79,15 +79,10 @@ func main() {
     http.ListenAndServe(":3000", handler)
 }
 
-type LobbyData struct {
-	LobbyId string
-}
-
 func lobbyHost(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	lobby_id := makeLobby()
-	data := &LobbyData{LobbyId: lobby_id}
-	jsonValue, _ := json.Marshal(data)
+	jsonValue, _ := json.Marshal(lobby_id)
 	// return lobby id to host
 	io.Writer.Write(w, jsonValue)
 	fmt.Println("lobbyHost")
