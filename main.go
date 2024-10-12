@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"bytes"
+	//"bytes"
 	"math/rand"
 	"net/http"
 
@@ -116,9 +116,11 @@ func lobbyHandler(w http.ResponseWriter, r *http.Request) {
             return
         }
 
+		/*
         buf := new(bytes.Buffer)
         buf.ReadFrom(r)
         log.Println(buf.String())
+		*/
 
         _, err = io.Copy(w, r)
         if err != nil {
