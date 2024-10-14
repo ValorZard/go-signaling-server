@@ -25,6 +25,7 @@ type ClientConnection struct {
 }
 
 type Lobby struct {
+	Socket *websocket.Conn
 	Clients []ClientConnection
 }
 
@@ -50,14 +51,19 @@ func generateNewLobbyId() string {
 	return id
 }
 
-func makeLobby() string {
+func makeLobby(conn *websocket.Conn) string {
 	lobby := Lobby{}
+	lobby.Socket = conn
 	lobby.Clients = []ClientConnection{}
 	// first client is always host
 	lobby.Clients = append(lobby.Clients, ClientConnection{IsHost: true})
 	lobby_id := generateNewLobbyId()
 	lobby_list[lobby_id] = lobby
 	return lobby_id
+}
+
+func (lobby *Lobby) sendToHost(ctx context.Context, data []byte) {
+	lobby.Socket.Write(ctx, websocket.MessageText, data)
 }
 
 func main() {
@@ -94,30 +100,13 @@ func lobbyHost(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 
 	// create new lobby
-	lobby_id := makeLobby()
+	lobby_id := makeLobby(conn)
 	// return lobby id to host
 	fmt.Printf("lobby id: %s", lobby_id)
 	fmt.Println(lobby_list)
 	// send lobby id to host
-	{
-		w, err := conn.Writer(ctx, websocket.MessageText)
-        if err != nil {
-            log.Println("Failed to get writer:", err)
-            return
-        }
-
-		_, err = w.Write([]byte(lobby_id))
-        if err != nil {
-            log.Println("Failed to io.Copy:", err)
-            return
-        }
-
-        err = w.Close()
-        if err != nil {
-            log.Println("Failed to close writer:", err)
-            return
-        }
-	}
+	lobby := lobby_list[lobby_id]
+	lobby.sendToHost(ctx, []byte(lobby_id))
 
 	// send client data to host
     for {
