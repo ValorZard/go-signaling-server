@@ -28,6 +28,8 @@ type Lobby struct {
 	Clients []ClientConnection
 }
 
+var lobby_list = map[string]Lobby{}
+
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 func generateNewLobbyId() string {
@@ -57,8 +59,6 @@ func makeLobby() string {
 	lobby_list[lobby_id] = lobby
 	return lobby_id
 }
-
-var lobby_list = map[string]Lobby{}
 
 func main() {
 	mux := http.NewServeMux()
@@ -157,6 +157,7 @@ func lobbyHost(w http.ResponseWriter, r *http.Request) {
     }
 }
 
+// call "/lobby?id={lobby_id}" to connect to lobby
 func lobbyHandler(w http.ResponseWriter, r *http.Request) {
 	// https://freshman.tech/snippets/go/extract-url-query-params/
 	// get lobby id from query params
