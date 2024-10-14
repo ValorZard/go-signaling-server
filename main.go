@@ -159,69 +159,31 @@ func lobbyHost(w http.ResponseWriter, r *http.Request) {
 
 // call "/lobby?id={lobby_id}" to connect to lobby
 func lobbyHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	// https://freshman.tech/snippets/go/extract-url-query-params/
 	// get lobby id from query params
 	lobby_id := r.URL.Query().Get("id")
 	log.Printf("lobby_id: %s", lobby_id)
 
-	
-	// only open up websocket connection if lobby exists
+	// only continue with connection if lobby exists
 	_, ok := lobby_list[lobby_id]
 	// If the key doesn't exist, return error
 	if !ok {
     	w.WriteHeader(http.StatusNotFound)
-        return
-	}
-
-
-	conn, err := websocket.Accept(w, r, nil)
-	if err != nil {
-		log.Printf("websocket initialization error: %s", err)
+		w.Write([]byte("404 - Lobby not found"))
 		return
 	}
 
-	log.Printf("websocket connection accepted")
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("Failed to read body: %s", err)
+		return
+	}
 
-	// Do something with conn C.
-	defer conn.CloseNow()
+	io.Writer.Write(w, body)
 
-	ctx := context.Background()
-
-    for {
-        typ, r, err := conn.Reader(ctx)
-        if err != nil {
-            log.Println("Failed to get reader:", err)
-            return
-        }
-
-        w, err := conn.Writer(ctx, typ)
-        if err != nil {
-            log.Println("Failed to get writer:", err)
-            return
-        }
-
-		
-        buf := new(bytes.Buffer)
-		_, err = io.Copy(buf, r)
-		if err != nil {
-			log.Println("Failed to copy data to buffer:", err)
-			return
-		}
-        log.Println(buf.String())
-		
-
-        _, err = w.Write(buf.Bytes())
-        if err != nil {
-            log.Println("Failed to io.Copy:", err)
-            return
-        }
-
-        err = w.Close()
-        if err != nil {
-            log.Println("Failed to close writer:", err)
-            return
-        }
-    }
+	fmt.Println("offerGet")
+	fmt.Println(string(body))
 }
 
 func offerGet(w http.ResponseWriter, r *http.Request) {
