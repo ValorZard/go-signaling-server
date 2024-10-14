@@ -19,12 +19,12 @@ var offers = []webrtc.SessionDescription{}
 var answers = []webrtc.SessionDescription{}
 
 type ClientConnection struct {
-	IsHost bool
 	Offer webrtc.SessionDescription
 	Answer webrtc.SessionDescription
 }
 
 type Lobby struct {
+	// connection to host for important stuff
 	Socket *websocket.Conn
 	Clients []ClientConnection
 }
@@ -55,14 +55,12 @@ func makeLobby(conn *websocket.Conn) string {
 	lobby := Lobby{}
 	lobby.Socket = conn
 	lobby.Clients = []ClientConnection{}
-	// first client is always host
-	lobby.Clients = append(lobby.Clients, ClientConnection{IsHost: true})
 	lobby_id := generateNewLobbyId()
 	lobby_list[lobby_id] = lobby
 	return lobby_id
 }
 
-func (lobby *Lobby) sendToHost(ctx context.Context, data []byte) {
+func (lobby *Lobby) sendTextToHost(ctx context.Context, data []byte) {
 	lobby.Socket.Write(ctx, websocket.MessageText, data)
 }
 
@@ -106,9 +104,9 @@ func lobbyHost(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(lobby_list)
 	// send lobby id to host
 	lobby := lobby_list[lobby_id]
-	lobby.sendToHost(ctx, []byte(lobby_id))
+	lobby.sendTextToHost(ctx, []byte(lobby_id))
 
-	// send client data to host
+	// wait for client to send data to host
     for {
 		typ, r, err := conn.Reader(ctx)
         if err != nil {
@@ -129,7 +127,7 @@ func lobbyHost(w http.ResponseWriter, r *http.Request) {
 			log.Println("Failed to copy data to buffer:", err)
 			return
 		}
-        log.Println(buf.String())
+        log.Printf("data from client %s",buf.String())
 		
 
         _, err = w.Write(buf.Bytes())
@@ -155,7 +153,7 @@ func lobbyHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("lobby_id: %s", lobby_id)
 
 	// only continue with connection if lobby exists
-	_, ok := lobby_list[lobby_id]
+	lobby, ok := lobby_list[lobby_id]
 	// If the key doesn't exist, return error
 	if !ok {
     	w.WriteHeader(http.StatusNotFound)
@@ -169,10 +167,7 @@ func lobbyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	io.Writer.Write(w, body)
-
-	fmt.Println("offerGet")
-	fmt.Println(string(body))
+	lobby.sendTextToHost(r.Context(), body)
 }
 
 func offerGet(w http.ResponseWriter, r *http.Request) {
