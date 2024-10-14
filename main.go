@@ -93,7 +93,12 @@ func lobbyHost(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 
-	// create new lobby and send id
+	// create new lobby
+	lobby_id := makeLobby()
+	// return lobby id to host
+	fmt.Printf("lobby id: %s", lobby_id)
+	fmt.Println(lobby_list)
+	// send lobby id to host
 	{
 		w, err := conn.Writer(ctx, websocket.MessageText)
         if err != nil {
@@ -101,15 +106,7 @@ func lobbyHost(w http.ResponseWriter, r *http.Request) {
             return
         }
 
-		// create new lobby
-		lobby_id := makeLobby()
-		jsonValue, _ := json.Marshal(lobby_id)
-
-		// return lobby id to host
-		fmt.Printf("lobby id: %s", jsonValue)
-		fmt.Println(lobby_list)
-
-		_, err = w.Write(jsonValue)
+		_, err = w.Write([]byte(lobby_id))
         if err != nil {
             log.Println("Failed to io.Copy:", err)
             return
@@ -124,7 +121,7 @@ func lobbyHost(w http.ResponseWriter, r *http.Request) {
 
 	// send client data to host
     for {
-        typ, r, err := conn.Reader(ctx)
+		typ, r, err := conn.Reader(ctx)
         if err != nil {
             log.Println("Failed to get reader:", err)
             return
