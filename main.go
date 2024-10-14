@@ -80,14 +80,84 @@ func main() {
 }
 
 func lobbyHost(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	lobby_id := makeLobby()
-	jsonValue, _ := json.Marshal(lobby_id)
-	// return lobby id to host
-	io.Writer.Write(w, jsonValue)
-	fmt.Println("lobbyHost")
-	fmt.Println(jsonValue)
-	fmt.Println(lobby_list)
+	conn, err := websocket.Accept(w, r, nil)
+	if err != nil {
+		log.Printf("websocket initialization error: %s", err)
+		return
+	}
+
+	log.Printf("websocket connection accepted")
+
+	// Do something with conn C.
+	defer conn.CloseNow()
+
+	ctx := context.Background()
+
+	// create new lobby and send id
+	{
+		w, err := conn.Writer(ctx, websocket.MessageText)
+        if err != nil {
+            log.Println("Failed to get writer:", err)
+            return
+        }
+
+		// create new lobby
+		lobby_id := makeLobby()
+		jsonValue, _ := json.Marshal(lobby_id)
+
+		// return lobby id to host
+		fmt.Printf("lobby id: %s", jsonValue)
+		fmt.Println(lobby_list)
+
+		_, err = w.Write(jsonValue)
+        if err != nil {
+            log.Println("Failed to io.Copy:", err)
+            return
+        }
+
+        err = w.Close()
+        if err != nil {
+            log.Println("Failed to close writer:", err)
+            return
+        }
+	}
+
+	// send client data to host
+    for {
+        typ, r, err := conn.Reader(ctx)
+        if err != nil {
+            log.Println("Failed to get reader:", err)
+            return
+        }
+
+        w, err := conn.Writer(ctx, typ)
+        if err != nil {
+            log.Println("Failed to get writer:", err)
+            return
+        }
+
+		// print data from client
+        buf := new(bytes.Buffer)
+		_, err = io.Copy(buf, r)
+		if err != nil {
+			log.Println("Failed to copy data to buffer:", err)
+			return
+		}
+        log.Println(buf.String())
+		
+
+        _, err = w.Write(buf.Bytes())
+        if err != nil {
+            log.Println("Failed to io.Copy:", err)
+            return
+        }
+
+        err = w.Close()
+        if err != nil {
+            log.Println("Failed to close writer:", err)
+            return
+        }
+    }
 }
 
 func lobbyHandler(w http.ResponseWriter, r *http.Request) {
