@@ -60,6 +60,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/", http.FileServer(http.Dir("./public")))
 	mux.HandleFunc("/lobby/host", lobbyHost)
+	mux.HandleFunc("/lobby/join", lobbyJoin)
 	mux.HandleFunc("/offer/get", offerGet)
 	mux.HandleFunc("/offer/post", offerPost)
 	mux.HandleFunc("/answer/get", answerGet)
@@ -76,12 +77,37 @@ func main() {
 
 func lobbyHost(w http.ResponseWriter, r *http.Request) {
 	lobby_id := makeLobby()
-	jsonValue, _ := json.Marshal(lobby_id)
 	// return lobby id to host
-	io.Writer.Write(w, jsonValue)
+	io.Writer.Write(w, []byte(lobby_id))
 	fmt.Println("lobbyHost")
-	fmt.Println(jsonValue)
+	fmt.Println(lobby_id)
 	fmt.Println(lobby_list)
+}
+
+// call "/lobby?id={lobby_id}" to connect to lobby
+func lobbyJoin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	// https://freshman.tech/snippets/go/extract-url-query-params/
+	// get lobby id from query params
+	lobby_id := r.URL.Query().Get("id")
+	fmt.Printf("lobby_id: %s", lobby_id)
+
+	// only continue with connection if lobby exists
+	_, ok := lobby_list[lobby_id]
+	// If the key doesn't exist, return error
+	if !ok {
+    	w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("404 - Lobby not found"))
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		fmt.Printf("Failed to read body: %s", err)
+		return
+	}
+
+	fmt.Printf("body: %s", body)
 }
 
 func offerGet(w http.ResponseWriter, r *http.Request) {
