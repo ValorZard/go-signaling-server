@@ -24,6 +24,10 @@ type Lobby struct {
 	Clients []ClientConnection
 }
 
+type PlayerData struct {
+	Id int
+}
+
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 func generateNewLobbyId() string {
@@ -93,7 +97,7 @@ func lobbyJoin(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("lobby_id: %s", lobby_id)
 
 	// only continue with connection if lobby exists
-	_, ok := lobby_list[lobby_id]
+	lobby, ok := lobby_list[lobby_id]
 	// If the key doesn't exist, return error
 	if !ok {
     	w.WriteHeader(http.StatusNotFound)
@@ -108,6 +112,14 @@ func lobbyJoin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Printf("body: %s", body)
+
+	// send player id once generated
+	player_id := len(lobby.Clients)
+	fmt.Printf("player_id: %d", player_id)
+	lobby.Clients = append(lobby.Clients, ClientConnection{IsHost: false})
+	player_data := PlayerData{Id: player_id}
+	jsonValue, _ := json.Marshal(player_data)
+	io.Writer.Write(w, jsonValue)
 }
 
 func offerGet(w http.ResponseWriter, r *http.Request) {
@@ -125,8 +137,10 @@ func offerGet(w http.ResponseWriter, r *http.Request) {
 
 	io.Writer.Write(w, jsonValue)
 
+	/*
 	fmt.Println("offerGet")
 	fmt.Println(jsonValue)
+	*/
 }
 
 func offerPost(w http.ResponseWriter, r *http.Request) {
@@ -142,8 +156,10 @@ func offerPost(w http.ResponseWriter, r *http.Request) {
 
 	offers = append(offers, sdp)
 
+	/*
 	fmt.Println("offerPost")
 	fmt.Println(offers)
+	*/
 }
 
 func answerGet(w http.ResponseWriter, r *http.Request) {
@@ -162,8 +178,10 @@ func answerGet(w http.ResponseWriter, r *http.Request) {
 
 	io.Writer.Write(w, jsonValue)
 
+	/*
 	fmt.Println("answerGet")
 	fmt.Println(jsonValue)
+	*/
 }
 
 func answerPost(w http.ResponseWriter, r *http.Request) {
@@ -179,8 +197,10 @@ func answerPost(w http.ResponseWriter, r *http.Request) {
 
 	answers = append(answers, sdp)
 
+	/*
 	fmt.Println("answerPost")
 	fmt.Println(answers)
+	*/
 }
 
 func ice(w http.ResponseWriter, r *http.Request) {
