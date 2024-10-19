@@ -2,10 +2,12 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
+	"strconv"
 
 	"github.com/pion/webrtc/v4"
 	"github.com/rs/cors"
@@ -143,8 +145,7 @@ func offerGet(w http.ResponseWriter, r *http.Request) {
 	*/
 }
 
-func offerPost(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("offerPost")
+func validatePlayer(w http.ResponseWriter, r *http.Request) (string, int, error) {
 	lobby_id := r.URL.Query().Get("lobby_id")
 	fmt.Printf("lobby_id: %s\n", lobby_id)
 
@@ -154,18 +155,32 @@ func offerPost(w http.ResponseWriter, r *http.Request) {
 	if !ok {
     	w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("404 - Lobby not found"))
-		return
+		return "", 0, errors.New("Lobby not found")
 	}
 
-	player_id := r.URL.Query().Get("player_id")
-	fmt.Printf("player_id: %s", player_id)
+	player_id_string := r.URL.Query().Get("player_id")
+	player_id, err := strconv.Atoi(player_id_string)
+    if err != nil {
+        // ... handle error
+        panic(err)
+    }
+	fmt.Printf("player_id: %d\n", player_id)
+	return lobby_id, player_id, nil
+}
+
+func offerPost(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("offerPost")
 	
+	_, _, err := validatePlayer(w, r)
+	if err != nil {
+		return
+	}
 
 	var sdp webrtc.SessionDescription
 
 	// Try to decode the request body into the struct. If there is an error,
 	// respond to the client with the error message and a 400 status code.
-	err := json.NewDecoder(r.Body).Decode(&sdp)
+	err = json.NewDecoder(r.Body).Decode(&sdp)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
