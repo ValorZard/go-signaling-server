@@ -148,7 +148,6 @@ func offerPost(w http.ResponseWriter, r *http.Request) {
 	lobby_id := r.URL.Query().Get("lobby_id")
 	fmt.Printf("lobby_id: %s\n", lobby_id)
 
-	/*
 	// only continue with connection if lobby exists
 	_, ok := lobby_list[lobby_id]
 	// If the key doesn't exist, return error
@@ -158,6 +157,7 @@ func offerPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	/*
 	player_id := r.URL.Query().Get("player_id")
 	fmt.Printf("player_id: %s", player_id)
 	*/
