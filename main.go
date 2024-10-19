@@ -157,10 +157,9 @@ func offerPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	/*
 	player_id := r.URL.Query().Get("player_id")
 	fmt.Printf("player_id: %s", player_id)
-	*/
+	
 
 	var sdp webrtc.SessionDescription
 
