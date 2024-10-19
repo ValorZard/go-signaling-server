@@ -144,6 +144,24 @@ func offerGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func offerPost(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("offerPost")
+	lobby_id := r.URL.Query().Get("lobby_id")
+	fmt.Printf("lobby_id: %s\n", lobby_id)
+
+	/*
+	// only continue with connection if lobby exists
+	_, ok := lobby_list[lobby_id]
+	// If the key doesn't exist, return error
+	if !ok {
+    	w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("404 - Lobby not found"))
+		return
+	}
+
+	player_id := r.URL.Query().Get("player_id")
+	fmt.Printf("player_id: %s", player_id)
+	*/
+
 	var sdp webrtc.SessionDescription
 
 	// Try to decode the request body into the struct. If there is an error,
@@ -157,7 +175,6 @@ func offerPost(w http.ResponseWriter, r *http.Request) {
 	offers = append(offers, sdp)
 
 	/*
-	fmt.Println("offerPost")
 	fmt.Println(offers)
 	*/
 }
