@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+	"sync"
 
 	"github.com/pion/webrtc/v4"
 	"github.com/rs/cors"
@@ -20,9 +21,12 @@ type ClientConnection struct {
 }
 
 type Lobby struct {
+	mutex sync.Mutex
 	// host is first client in lobby.Clients
 	Clients []ClientConnection
 }
+
+var lobby_list = map[string]*Lobby{}
 
 type PlayerData struct {
 	// player id is index in lobby.Clients
@@ -53,13 +57,10 @@ func makeLobby() string {
 	lobby := Lobby{}
 	lobby.Clients = []ClientConnection{}
 	// first client is always host
-	lobby.Clients = append(lobby.Clients, ClientConnection{IsHost: true})
 	lobby_id := generateNewLobbyId()
-	lobby_list[lobby_id] = lobby
+	lobby_list[lobby_id] = &lobby
 	return lobby_id
 }
-
-var lobby_list = map[string]Lobby{}
 
 func main() {
 	mux := http.NewServeMux()
@@ -82,6 +83,11 @@ func main() {
 
 func lobbyHost(w http.ResponseWriter, r *http.Request) {
 	lobby_id := makeLobby()
+	lobby := lobby_list[lobby_id]
+	lobby.mutex.Lock()
+	defer lobby.mutex.Unlock()
+	// host is first client in lobby.Clients
+	lobby.Clients = append(lobby.Clients, ClientConnection{IsHost: true})
 	// return lobby id to host
 	io.Writer.Write(w, []byte(lobby_id))
 	fmt.Println("lobbyHost")
@@ -106,6 +112,8 @@ func lobbyJoin(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("404 - Lobby not found"))
 		return
 	}
+	lobby.mutex.Lock()
+	defer lobby.mutex.Unlock()
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -116,9 +124,10 @@ func lobbyJoin(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("body: %s", body)
 
 	// send player id once generated
-	player_id := len(lobby.Clients)
-	fmt.Printf("player_id: %d\n", player_id)
 	lobby.Clients = append(lobby.Clients, ClientConnection{IsHost: false})
+	// player id is index in lobby.Clients
+	player_id := len(lobby.Clients) - 1
+	fmt.Printf("player_id: %d\n", player_id)
 	fmt.Println(lobby.Clients)
 	player_data := PlayerData{Id: player_id}
 	jsonValue, _ := json.Marshal(player_data)
@@ -131,7 +140,9 @@ func validatePlayer(w http.ResponseWriter, r *http.Request) (string, int, error)
 	//fmt.Printf("lobby_id: %s\n", lobby_id)
 
 	// only continue with connection if lobby exists
-	_, ok := lobby_list[lobby_id]
+	lobby, ok := lobby_list[lobby_id]
+	lobby.mutex.Lock()
+	defer lobby.mutex.Unlock()
 	// If the key doesn't exist, return error
 	if !ok {
     	w.WriteHeader(http.StatusNotFound)
@@ -148,9 +159,9 @@ func validatePlayer(w http.ResponseWriter, r *http.Request) (string, int, error)
     }
 	//fmt.Printf("player_id: %d\n", player_id)
 	//fmt.Printf("length of lobby.Clients: %d\n", len(lobby_list[lobby_id].Clients))
-	fmt.Println(lobby_list[lobby_id].Clients)
+	fmt.Println(lobby.Clients)
 	// check if player actually exists
-	if player_id < 0 || player_id >= len(lobby_list[lobby_id].Clients) {
+	if player_id < 0 || player_id >= len(lobby.Clients) {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("404 - Player not found"))
 		return "", 0, errors.New("Player not found")
@@ -165,8 +176,12 @@ func offerGet(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+	
+	lobby := lobby_list[lobby_id]
+	lobby.mutex.Lock()
+	defer lobby.mutex.Unlock()
 
-	offer := lobby_list[lobby_id].Clients[player_id].Offer
+	offer := lobby.Clients[player_id].Offer
 
 	jsonValue, _ := json.Marshal(offer)
 
@@ -196,8 +211,12 @@ func offerPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lobby_list[lobby_id].Clients[player_id].Offer = sdp
-	fmt.Println(lobby_list[lobby_id])
+	lobby := lobby_list[lobby_id]
+	lobby.mutex.Lock()
+	defer lobby.mutex.Unlock()
+
+	lobby.Clients[player_id].Offer = sdp
+	fmt.Println(lobby)
 }
 
 func answerGet(w http.ResponseWriter, r *http.Request) {
@@ -208,7 +227,11 @@ func answerGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	answer := lobby_list[lobby_id].Clients[player_id].Answer
+	lobby := lobby_list[lobby_id]
+	lobby.mutex.Lock()
+	defer lobby.mutex.Unlock()
+
+	answer := lobby.Clients[player_id].Answer
 
 	jsonValue, _ := json.Marshal(answer)
 
@@ -233,8 +256,12 @@ func answerPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lobby_list[lobby_id].Clients[player_id].Answer = sdp
-	fmt.Println(lobby_list[lobby_id])
+	lobby := lobby_list[lobby_id]
+	lobby.mutex.Lock()
+	defer lobby.mutex.Unlock()
+
+	lobby.Clients[player_id].Answer = sdp
+	fmt.Println(lobby)
 }
 
 func ice(w http.ResponseWriter, r *http.Request) {
