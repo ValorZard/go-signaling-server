@@ -16,8 +16,8 @@ import (
 
 type ClientConnection struct {
 	IsHost bool
-	Offer webrtc.SessionDescription
-	Answer webrtc.SessionDescription
+	Offer *webrtc.SessionDescription
+	Answer *webrtc.SessionDescription
 }
 
 type Lobby struct {
@@ -181,6 +181,11 @@ func offerGet(w http.ResponseWriter, r *http.Request) {
 	defer lobby.mutex.Unlock()
 
 	offer := lobby.Clients[player_id].Offer
+	if offer == nil {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("404 - Offer not found"))
+		return
+	}
 
 	jsonValue, _ := json.Marshal(offer)
 
@@ -212,7 +217,7 @@ func offerPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lobby.Clients[player_id].Offer = sdp
+	lobby.Clients[player_id].Offer = &sdp
 	fmt.Printf("Lobby: %+v\n", lobby.Clients)
 }
 
@@ -229,6 +234,11 @@ func answerGet(w http.ResponseWriter, r *http.Request) {
 	defer lobby.mutex.Unlock()
 
 	answer := lobby.Clients[player_id].Answer
+	if answer == nil {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("404 - Answer not found"))
+		return
+	}
 
 	jsonValue, _ := json.Marshal(answer)
 
@@ -257,7 +267,7 @@ func answerPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lobby.Clients[player_id].Answer = sdp
+	lobby.Clients[player_id].Answer = &sdp
 	fmt.Printf("Lobby: %+v\n", lobby.Clients)
 }
 
