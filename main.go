@@ -67,6 +67,7 @@ func main() {
 	mux.Handle("/", http.FileServer(http.Dir("./public")))
 	mux.HandleFunc("/lobby/host", lobbyHost)
 	mux.HandleFunc("/lobby/join", lobbyJoin)
+	mux.HandleFunc("/lobby/delete", lobbyDelete)
 	mux.HandleFunc("/offer/get", offerGet)
 	mux.HandleFunc("/offer/post", offerPost)
 	mux.HandleFunc("/answer/get", answerGet)
@@ -91,8 +92,15 @@ func lobbyHost(w http.ResponseWriter, r *http.Request) {
 	// return lobby id to host
 	io.Writer.Write(w, []byte(lobby_id))
 	fmt.Println("lobbyHost")
-	fmt.Println(lobby_id)
-	fmt.Println(lobby_list)
+	fmt.Printf("lobby added: %s\n",lobby_id)
+	// print all lobbies
+	lobbies := make([]string, len(lobby_list))
+	i := 0
+	for k := range lobby_list {
+		lobbies[i] = k
+		i++
+	}
+	fmt.Printf("lobby_list:%s\n", lobbies)
 }
 
 // call "/lobby?id={lobby_id}" to connect to lobby
@@ -132,6 +140,27 @@ func lobbyJoin(w http.ResponseWriter, r *http.Request) {
 	player_data := PlayerData{Id: player_id}
 	jsonValue, _ := json.Marshal(player_data)
 	io.Writer.Write(w, jsonValue)
+}
+
+func lobbyDelete(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("lobbyDelete")
+	w.Header().Set("Content-Type", "application/json")
+	// https://freshman.tech/snippets/go/extract-url-query-params/
+	// get lobby id from query params
+	lobby_id := r.URL.Query().Get("id")
+	fmt.Printf("lobby_id: %s\n", lobby_id)
+
+	// only continue with connection if lobby exists
+	_, ok := lobby_list[lobby_id]
+	// If the key doesn't exist, return error
+	if !ok {
+    	w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("404 - Lobby not found"))
+		return
+	}
+	
+	// delete lobby
+	delete(lobby_list, lobby_id)
 }
 
 func validatePlayer(w http.ResponseWriter, r *http.Request) (*Lobby, int, error) {
