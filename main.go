@@ -62,6 +62,16 @@ func makeLobby() string {
 	return lobby_id
 }
 
+func getLobbyIds() []string {
+	lobbies := make([]string, len(lobby_list))
+	i := 0
+	for k := range lobby_list {
+		lobbies[i] = k
+		i++
+	}
+	return lobbies
+}
+
 func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/", http.FileServer(http.Dir("./public")))
@@ -94,13 +104,7 @@ func lobbyHost(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("lobbyHost")
 	fmt.Printf("lobby added: %s\n",lobby_id)
 	// print all lobbies
-	lobbies := make([]string, len(lobby_list))
-	i := 0
-	for k := range lobby_list {
-		lobbies[i] = k
-		i++
-	}
-	fmt.Printf("lobby_list:%s\n", lobbies)
+	fmt.Printf("lobby_list:%s\n", getLobbyIds())
 }
 
 // call "/lobby?id={lobby_id}" to connect to lobby
@@ -147,7 +151,7 @@ func lobbyDelete(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	// https://freshman.tech/snippets/go/extract-url-query-params/
 	// get lobby id from query params
-	lobby_id := r.URL.Query().Get("id")
+	lobby_id := r.URL.Query().Get("lobby_id")
 	fmt.Printf("lobby_id: %s\n", lobby_id)
 
 	// only continue with connection if lobby exists
@@ -161,6 +165,7 @@ func lobbyDelete(w http.ResponseWriter, r *http.Request) {
 	
 	// delete lobby
 	delete(lobby_list, lobby_id)
+	fmt.Printf("lobby_list:%s\n", getLobbyIds())
 }
 
 func validatePlayer(w http.ResponseWriter, r *http.Request) (*Lobby, int, error) {
